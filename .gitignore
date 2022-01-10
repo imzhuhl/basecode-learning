@@ -1,2 +1,4 @@
 fmt
 build
+.cache
+.vscode
