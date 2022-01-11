@@ -14,6 +14,20 @@ namespace basecode {
         _heap = nullptr;
     }
 
+    void terp::reset() {
+        _registers.pc = 0;
+        _registers.fr = 0;
+        _registers.sr = 0;
+        _registers.sp = heap_size_in_qwords();
+
+        for (size_t i = 0; i < 64; i++) {
+            _registers.i[i] = 0;
+            _registers.f[i] = 0.0;
+        }
+
+        _exited = false;
+    }
+
     bool terp::initialize() {
         _heap = new uint64_t[heap_size_in_qwords()];
         _registers.pc = 0;
@@ -36,7 +50,7 @@ namespace basecode {
 
     uint64_t terp::pop() {
         uint64_t value = _heap[_registers.sp];
-        _registers.sp -= sizeof(uint64_t);
+        _registers.sp += sizeof(uint64_t);
         return value;
     }
 
@@ -166,10 +180,13 @@ namespace basecode {
         return size;
     }
 
-
     size_t terp::align(uint64_t value, size_t size) const {
         auto offset = value % size;
         return offset ? value + (size - offset) : value;
+    }
+
+    bool terp::has_exited() const {
+        return _exited;
     }
 
     bool terp::step(result& r) {
@@ -198,10 +215,17 @@ namespace basecode {
             }
             case op_codes::push: {
                 fmt::print("push\n");
+                uint64_t source_value;
+                if (!get_operand_value(r, inst, 0, source_value))
+                    return false;
+                push(source_value);
                 break;
             }
             case op_codes::pop: {
                 fmt::print("pop\n");
+                uint64_t value = pop();
+                if (!set_target_operand_value(r, inst, 0, value))
+                    return false;
                 break;
             }
             case op_codes::add: {
@@ -215,57 +239,164 @@ namespace basecode {
                     return false;
                 break;
             }
-            case op_codes::sub:
-            case op_codes::mul:
-            case op_codes::div:
-            case op_codes::mod:
-            case op_codes::neg:
-            case op_codes::shr:
-            case op_codes::shl:
-            case op_codes::ror:
-            case op_codes::rol:
-            case op_codes::and_op:
-            case op_codes::or_op:
-            case op_codes::xor_op:
-            case op_codes::not_op:
-            case op_codes::bis:
-            case op_codes::bic:
-            case op_codes::test:
-            case op_codes::cmp:
-            case op_codes::bz:
-            case op_codes::bnz:
-            case op_codes::tbz:
-            case op_codes::tbnz:
-            case op_codes::bne:
-            case op_codes::beq:
-            case op_codes::bae:
-            case op_codes::ba:
-            case op_codes::ble:
-            case op_codes::bl:
-            case op_codes::bo:
-            case op_codes::bcc:
-            case op_codes::bcs:
-            case op_codes::jsr:
-            case op_codes::ret:
-            case op_codes::jmp:
-            case op_codes::meta:
-            case op_codes::debug:
-            break;
+            case op_codes::sub: {
+                fmt::print("sub\n");
+                uint64_t lhs_value, rhs_value;
+                if (!get_operand_value(r, inst, 1, lhs_value))
+                    return false;
+                if (!get_operand_value(r, inst, 2, rhs_value))
+                    return false;
+                if (!set_target_operand_value(r, inst, 0, lhs_value - rhs_value))
+                    return false;
+                break;
+            }
+            case op_codes::mul: {
+                fmt::print("mul\n");
+                uint64_t lhs_value, rhs_value;
+                if (!get_operand_value(r, inst, 1, lhs_value))
+                    return false;
+                if (!get_operand_value(r, inst, 2, rhs_value))
+                    return false;
+                if (!set_target_operand_value(r, inst, 0, lhs_value * rhs_value))
+                    return false;
+                break;
+            }
+            case op_codes::div: {
+                fmt::print("div\n");
+                uint64_t lhs_value, rhs_value;
+                if (!get_operand_value(r, inst, 1, lhs_value))
+                    return false;
+                if (!get_operand_value(r, inst, 2, rhs_value))
+                    return false;
+                uint64_t result = 0;
+                if (rhs_value != 0)
+                    result = lhs_value / rhs_value;
+                if (!set_target_operand_value(r, inst, 0, result))
+                    return false;
+                break;
+            }
+            case op_codes::mod: {
+                fmt::print("mod\n");
+                uint64_t lhs_value, rhs_value;
+                if (!get_operand_value(r, inst, 1, lhs_value))
+                    return false;
+                if (!get_operand_value(r, inst, 2, rhs_value))
+                    return false;
+                if (!set_target_operand_value(r, inst, 0, lhs_value % rhs_value))
+                    return false;
+                break;
+            }
+            case op_codes::neg: {
+                break;
+            }
+            case op_codes::shr: {
+                break;
+            }
+            case op_codes::shl: {
+                break;
+            }
+            case op_codes::ror: {
+                break;
+            }
+            case op_codes::rol: {
+                break;
+            }
+            case op_codes::and_op: {
+                break;
+            }
+            case op_codes::or_op: {
+                break;
+            }
+            case op_codes::xor_op: {
+                break;
+            }
+            case op_codes::not_op: {
+                break;
+            }
+            case op_codes::bis: {
+                break;
+            }
+            case op_codes::bic: {
+                break;
+            }
+            case op_codes::test: {
+                break;
+            }
+            case op_codes::cmp: {
+                break;
+            }
+            case op_codes::bz: {
+                break;
+            }
+            case op_codes::bnz: {
+                break;
+            }
+            case op_codes::tbz: {
+                break;
+            }
+            case op_codes::tbnz: {
+                break;
+            }
+            case op_codes::bne: {
+                break;
+            }
+            case op_codes::beq: {
+                break;
+            }
+            case op_codes::bae: {
+                break;
+            }
+            case op_codes::ba: {
+                break;
+            }
+            case op_codes::ble: {
+                break;
+            }
+            case op_codes::bl: {
+                break;
+            }
+            case op_codes::bo: {
+                break;
+            }
+            case op_codes::bcc: {
+                break;
+            }
+            case op_codes::bcs: {
+                break;
+            }
+            case op_codes::jsr: {
+                break;
+            }
+            case op_codes::ret: {
+                break;
+            }
+            case op_codes::jmp: {
+                break;
+            }
+            case op_codes::meta: {
+                break;
+            }
+            case op_codes::debug: {
+                break;
+            }
+            case op_codes::exit: {
+                fmt::print("exit\n");
+                _exited = true;
+                break;
+            }
         }
         return !r.is_failed();
     }
 
-    bool terp::get_operand_value(
-            result& r,
-            const instruction_t& instruction,
-            uint8_t operand_index,
-            uint64_t& value) const {
+    bool terp::get_operand_value(result& r, const instruction_t& instruction, uint8_t operand_index,
+                                 uint64_t& value) const {
 
         switch (instruction.operands[operand_index].type) {
             case operand_types::register_integer:
                 value = _registers.i[instruction.operands[operand_index].index];
                 break;
             case operand_types::register_floating_point:
+                r.add_message("B005", "integer registers don't support floating point values.", true);
                 break;
             case operand_types::register_sp:
                 value = _registers.sp;
@@ -284,44 +415,51 @@ namespace basecode {
                 break;
         }
 
+        switch (instruction.size) {
+            case op_sizes::byte:
+                break;
+            case op_sizes::word:
+                break;
+            case op_sizes::dword:
+                break;
+            case op_sizes::qword:
+                break;
+            default: {
+                r.add_message("B005", "unsupported size of 'none' for operand.", true);
+                return false;
+            }
+        }
+
         return true;
     }
 
-    bool terp::get_operand_value( 
-            result& r,
-            const instruction_t& instruction,
-            uint8_t operand_index,
-            double& value) const {
+    bool terp::get_operand_value(result& r, const instruction_t& instruction, uint8_t operand_index,
+                                 double& value) const {
         switch (instruction.operands[operand_index].type) {
-            case operand_types::register_integer:
-                break;
-            case operand_types::register_floating_point: {
+            case operand_types::register_floating_point:
                 value = _registers.f[instruction.operands[operand_index].index];
                 break;
-            }
+            case operand_types::register_integer:
             case operand_types::register_sp:
             case operand_types::register_pc:
             case operand_types::register_flags:
-            case operand_types::register_status: {
+            case operand_types::register_status:
                 r.add_message(
-                    "B005",
-                    "integer registers cannot be used for floating point operands.",
-                    true);
+                        "B005",
+                        "integer registers cannot be used for floating point operands.",
+                        true);
                 break;
-            }
-            case operand_types::constant: {
+            case operand_types::constant:
                 value = instruction.operands[operand_index].value;
                 break;
-            }
         }
+
         return true;
+
     }
     
-    bool terp::set_target_operand_value(
-            result& r,
-            const instruction_t& instruction,
-            uint8_t operand_index,
-            uint64_t value) {
+    bool terp::set_target_operand_value(result& r, const instruction_t& instruction, uint8_t operand_index,
+                                        uint64_t value) {
         switch (instruction.operands[operand_index].type) {
             case operand_types::register_integer:
                 _registers.i[instruction.operands[operand_index].index] = value;
@@ -333,12 +471,16 @@ namespace basecode {
                     true);
                 break;
             case operand_types::register_sp:
+                _registers.sp = value;
                 break;
             case operand_types::register_pc:
+                _registers.pc = value;
                 break;
             case operand_types::register_flags:
+                _registers.fr = value;
                 break;
             case operand_types::register_status:
+                _registers.sr = value;
                 break;
             case operand_types::constant:
                 r.add_message(
@@ -350,5 +492,35 @@ namespace basecode {
 
         return false;
     }
+
+    bool terp::set_target_operand_value(result& r, const instruction_t& instruction, uint8_t operand_index,
+                                        double value) {
+        switch (instruction.operands[operand_index].type) {
+            case operand_types::register_sp:
+            case operand_types::register_pc:
+            case operand_types::register_flags:
+            case operand_types::register_status:
+            case operand_types::register_integer:
+                r.add_message(
+                        "B009",
+                        "integer registers cannot be the target for floating point values.",
+                        true);
+                break;
+            case operand_types::register_floating_point:
+                _registers.f[instruction.operands[operand_index].index] = value;
+                break;
+            case operand_types::constant:
+                r.add_message(
+                        "B006",
+                        "constant cannot be a target operand type.",
+                        true);
+                break;
+        }
+        return false;
+    }
+
+
+
+
 
 }

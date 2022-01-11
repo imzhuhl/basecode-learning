@@ -198,7 +198,8 @@ namespace basecode {
         ret,
         jmp,
         meta,
-        debug
+        debug,
+        exit,
     };
 
     enum class op_sizes : uint8_t {
@@ -216,7 +217,7 @@ namespace basecode {
         register_pc,
         register_flags,
         register_status,
-        constant
+        constant,
     };
 
     struct operand_encoding_t {
@@ -255,7 +256,10 @@ namespace basecode {
         void dump_state();
         void dump_heap(uint64_t address, size_t size = 256);
 
+        void reset();
         bool step(result& r);
+        bool has_exited() const;
+
         size_t encode_instruction(result& r, uint64_t address, instruction_t instruction);
         size_t decode_instruction(result& r, instruction_t& instruction);
         size_t align(uint64_t value, size_t size) const;
@@ -270,6 +274,7 @@ namespace basecode {
                                         uint8_t operand_index, double value);
 
     private:
+        bool _exited = false;
         uint32_t _heap_size = 0;
         uint64_t* _heap = nullptr;
         register_file_t _registers {};
