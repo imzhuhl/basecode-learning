@@ -195,7 +195,7 @@ namespace basecode {
         bcc,
         bcs,
         jsr,
-        ret,
+        rts,
         jmp,
         meta,
         debug,
@@ -217,13 +217,25 @@ namespace basecode {
         register_pc,
         register_flags,
         register_status,
-        constant,
+        constant_integer,
+        constant_float,
+        increment_constant_pre,
+        increment_constant_post,
+        increment_register_pre,
+        increment_register_post,
+        decrement_constant_pre,
+        decrement_constant_post,
+        decrement_register_pre,
+        decrement_register_post,
     };
 
     struct operand_encoding_t {
         operand_types type = operand_types::register_integer;
         uint8_t index;
-        uint64_t value;
+        union {
+            uint64_t u64;
+            double d64;
+        } value;
     };
 
     struct instruction_t {
@@ -243,22 +255,20 @@ namespace basecode {
 
     class terp {
     public:
-        explicit terp(uint32_t heap_size);  // $heap_size Bytes
+        explicit terp(size_t heap_size);  // $heap_size Bytes
         virtual ~terp();
-        bool initialize();
+        void reset();
 
         uint64_t pop();
         void push(uint64_t value);
 
-        size_t heap_size() const;
-        size_t heap_size_in_qwords() const;
-        const register_file_t& register_file() const;
-        void dump_state();
-        void dump_heap(uint64_t address, size_t size = 256);
-
-        void reset();
+        bool initialize();
         bool step(result& r);
         bool has_exited() const;
+
+        const register_file_t& register_file() const;
+        void dump_heap(uint64_t offset, size_t size = 256);
+        void dump_state();
 
         size_t encode_instruction(result& r, uint64_t address, instruction_t instruction);
         size_t decode_instruction(result& r, instruction_t& instruction);
@@ -274,9 +284,24 @@ namespace basecode {
                                         uint8_t operand_index, double value);
 
     private:
+        inline uint8_t* byte_ptr(uint64_t address) const {
+            return _heap + address;
+        }
+        inline uint16_t* word_ptr(uint64_t address) const {
+            return reinterpret_cast<uint16_t*>(_heap + address);
+        }
+        inline uint32_t* dword_ptr(uint64_t address) const {
+            return reinterpret_cast<uint32_t*>(_heap + address);
+        }
+        inline uint64_t* qword_ptr(uint64_t address) const {
+            return reinterpret_cast<uint64_t*>(_heap + address);
+        }
+
+
+    private:
         bool _exited = false;
-        uint32_t _heap_size = 0;
-        uint64_t* _heap = nullptr;
+        size_t _heap_size = 0;
+        uint8_t* _heap = nullptr;
         register_file_t _registers {};
 
     };

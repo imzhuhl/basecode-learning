@@ -11,7 +11,7 @@ add_executable(
     terp.h terp.cpp
     result.h result_message.h
     hex_formatter.h hex_formatter.cpp
-    
+    instruction_emitter.h instruction_emitter.cpp
 )
 
 
