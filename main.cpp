@@ -1,9 +1,8 @@
+#include <chrono>
 #include <iostream>
 #include <fmt/format.h>
 #include "terp.h"
-#include "hex_formatter.h"
 #include "instruction_emitter.h"
-
 
 void print_results(basecode::result& r) {
     fmt::print("result success: {}\n", !r.is_failed());
@@ -16,35 +15,35 @@ void print_results(basecode::result& r) {
     }
 }
 
-
 int main() {
+    auto start = std::chrono::high_resolution_clock::now();
     basecode::terp terp(1024 * 1024 * 32);
     basecode::result r;
     terp.initialize();
 
-    size_t inst_size = 0;
-    uint64_t location_counter = 0;
 
-    basecode::instruction_emitter emitter(&terp);
-    emitter.nop(r);
-    emitter.jump_direct(r, 1024);
+    basecode::instruction_emitter bootstrap_emitter(0);
+    bootstrap_emitter.jump_direct(0);
 
-    auto fn_square = emitter.location_counter();
-    emitter.load_stack_offset_to_register(r, 0, 8);
-    emitter.multiply_int_register_to_register(r, basecode::op_sizes::dword, 0, 0, 0);
-    emitter.store_register_to_stack_offset(r, 0, 8);
-    emitter.rts(r);
+    basecode::instruction_emitter fn_square_emitter(bootstrap_emitter.end_address());
+    fn_square_emitter.load_stack_offset_to_register(0, 8);
+    fn_square_emitter.multiply_int_register_to_register(basecode::op_sizes::dword, 0, 0, 0);
+    fn_square_emitter.store_register_to_stack_offset(0, 8);
+    fn_square_emitter.rts();
 
-    emitter.location_counter(1024);
-    emitter.nop(r);
-    emitter.push_int_constant(r, basecode::op_sizes::dword, 9);
-    emitter.jump_subroutine_direct(r, fn_square);
-    emitter.pop_int_register(r, basecode::op_sizes::dword, 5);
-    emitter.push_int_constant(r, basecode::op_sizes::dword, 5);
-    emitter.jump_subroutine_direct(r, fn_square);
-    emitter.pop_int_register(r, basecode::op_sizes::dword, 6);
+    basecode::instruction_emitter main_emitter(fn_square_emitter.end_address());
+    main_emitter.push_int_constant(basecode::op_sizes::dword, 9);
+    main_emitter.jump_subroutine_direct(fn_square_emitter.start_address());
+    main_emitter.pop_int_register(basecode::op_sizes::dword, 5);
+    main_emitter.push_int_constant(basecode::op_sizes::dword, 5);
+    main_emitter.jump_subroutine_direct(fn_square_emitter.start_address());
+    main_emitter.pop_int_register(basecode::op_sizes::dword, 6);
+    main_emitter.exit();
 
-    emitter.exit(r);
+    bootstrap_emitter[0].patch_branch_address(main_emitter.start_address());
+    bootstrap_emitter.encode(r, terp);
+    fn_square_emitter.encode(r, terp);
+    main_emitter.encode(r, terp);
 
     if (r.is_failed()) {
         print_results(r);
@@ -52,15 +51,19 @@ int main() {
     }
 
     terp.dump_heap(0);
-    terp.dump_heap(1024);
+    fmt::print("Disassembly:\n{}\n", terp.disassemble(r, 0));
 
     while (!terp.has_exited()) {
         if (!terp.step(r)) {
             print_results(r);
             return 1;
         }
-        terp.dump_state();
     }
+    terp.dump_state();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    fmt::print("execution time (in us): {}", duration);
 
     return 0;
 }
