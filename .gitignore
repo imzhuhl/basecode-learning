@@ -3,5 +3,4 @@ build
 .cache
 .vscode
 .idea
-cmake-build-debug
-cmake-build-debug-v100-cs
+cmake-build-*

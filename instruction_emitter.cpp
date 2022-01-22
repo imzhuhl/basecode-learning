@@ -3,27 +3,25 @@
 
 namespace basecode {
 
-    instruction_emitter::instruction_emitter(uint64_t address) : _start_address(address) {
+    instruction_emitter::instruction_emitter(
+            uint64_t address) : _start_address(address) {
     }
 
     void instruction_emitter::nop() {
         basecode::instruction_t no_op;
         no_op.op = basecode::op_codes::nop;
-
         _instructions.push_back(no_op);
     }
 
     void instruction_emitter::rts() {
         basecode::instruction_t rts_op;
         rts_op.op = basecode::op_codes::rts;
-
         _instructions.push_back(rts_op);
     }
 
     void instruction_emitter::exit() {
         basecode::instruction_t exit_op;
         exit_op.op = basecode::op_codes::exit;
-
         _instructions.push_back(exit_op);
     }
 
@@ -59,8 +57,11 @@ namespace basecode {
         _instructions.push_back(load_op);
     }
 
-    void instruction_emitter::add_int_register_to_register(op_sizes size, uint8_t target_index,
-                                                           uint8_t lhs_index, uint8_t rhs_index) {
+    void instruction_emitter::add_int_register_to_register(
+            op_sizes size,
+            uint8_t target_index,
+            uint8_t lhs_index,
+            uint8_t rhs_index) {
         basecode::instruction_t add_op;
         add_op.op = basecode::op_codes::add;
         add_op.size = size;
@@ -71,11 +72,12 @@ namespace basecode {
         add_op.operands[1].index = lhs_index;
         add_op.operands[2].type = basecode::operand_types::register_integer;
         add_op.operands[2].index = rhs_index;
-
         _instructions.push_back(add_op);
     }
 
-    void instruction_emitter::load_stack_offset_to_register(uint8_t target_index, uint64_t offset) {
+    void instruction_emitter::load_stack_offset_to_register(
+            uint8_t target_index,
+            uint64_t offset) {
         basecode::instruction_t load_op;
         load_op.op = basecode::op_codes::load;
         load_op.size = basecode::op_sizes::qword;
@@ -86,11 +88,12 @@ namespace basecode {
         load_op.operands[1].index = 0;
         load_op.operands[2].type = basecode::operand_types::constant_integer;
         load_op.operands[2].value.u64 = offset;
-
         _instructions.push_back(load_op);
     }
 
-    void instruction_emitter::store_register_to_stack_offset(uint8_t source_index, uint64_t offset) {
+    void instruction_emitter::store_register_to_stack_offset(
+            uint8_t source_index,
+            uint64_t offset) {
         basecode::instruction_t store_op;
         store_op.op = basecode::op_codes::store;
         store_op.size = basecode::op_sizes::qword;
@@ -100,7 +103,6 @@ namespace basecode {
         store_op.operands[1].type = basecode::operand_types::register_sp;
         store_op.operands[2].type = basecode::operand_types::constant_integer;
         store_op.operands[2].value.u64 = offset;
-
         _instructions.push_back(store_op);
     }
 
@@ -119,14 +121,13 @@ namespace basecode {
         div_op.operands[1].index = lhs_index;
         div_op.operands[2].type = basecode::operand_types::register_integer;
         div_op.operands[2].index = rhs_index;
-
         _instructions.push_back(div_op);
     }
 
     bool instruction_emitter::encode(result& r, terp& terp) {
         size_t offset = 0;
-        for (const auto& inst : _instructions) {
-            auto inst_size = terp.encode_instruction(r, _start_address + offset, inst);
+        for (auto& inst : _instructions) {
+            auto inst_size = inst.encode(r, terp.heap(), _start_address + offset);
             if (inst_size == 0)
                 return false;
             offset += inst_size;
@@ -160,12 +161,30 @@ namespace basecode {
         sub_op.op = basecode::op_codes::sub;
         sub_op.size = size;
         sub_op.operands_count = 3;
-        sub_op.operands[0].index = target_index;
         sub_op.operands[0].type = basecode::operand_types::register_integer;
-        sub_op.operands[1].index = lhs_index;
+        sub_op.operands[0].index = target_index;
         sub_op.operands[1].type = basecode::operand_types::register_integer;
-        sub_op.operands[2].index = rhs_index;
+        sub_op.operands[1].index = lhs_index;
         sub_op.operands[2].type = basecode::operand_types::register_integer;
+        sub_op.operands[2].index = rhs_index;
+        _instructions.push_back(sub_op);
+    }
+
+    void instruction_emitter::subtract_int_constant_from_register(
+            op_sizes size,
+            uint8_t target_index,
+            uint8_t lhs_index,
+            uint64_t rhs_value) {
+        basecode::instruction_t sub_op;
+        sub_op.op = basecode::op_codes::sub;
+        sub_op.size = size;
+        sub_op.operands_count = 3;
+        sub_op.operands[0].type = basecode::operand_types::register_integer;
+        sub_op.operands[0].index = target_index;
+        sub_op.operands[1].type = basecode::operand_types::register_integer;
+        sub_op.operands[1].index = lhs_index;
+        sub_op.operands[2].type = basecode::operand_types::constant_integer;
+        sub_op.operands[2].value.u64 = rhs_value;
         _instructions.push_back(sub_op);
     }
 
@@ -298,15 +317,39 @@ namespace basecode {
         _instructions.push_back(push_op);
     }
 
-}
+    void instruction_emitter::compare_int_register_to_constant(
+            op_sizes size,
+            uint8_t index,
+            uint64_t value) {
+        basecode::instruction_t cmp_op;
+        cmp_op.op = basecode::op_codes::cmp;
+        cmp_op.size = size;
+        cmp_op.operands_count = 2;
+        cmp_op.operands[0].type = basecode::operand_types::register_integer;
+        cmp_op.operands[0].index = index;
+        cmp_op.operands[1].type = basecode::operand_types::constant_integer;
+        cmp_op.operands[1].value.u64 = value;
+        _instructions.push_back(cmp_op);
+    }
 
+    void instruction_emitter::branch_if_equal(uint64_t address) {
+        basecode::instruction_t branch_op;
+        branch_op.op = basecode::op_codes::beq;
+        branch_op.size = basecode::op_sizes::qword;
+        branch_op.operands_count = 1;
+        branch_op.operands[0].type = basecode::operand_types::constant_integer;
+        branch_op.operands[0].value.u64 = address;
+        _instructions.push_back(branch_op);
+    }
 
+    void instruction_emitter::branch_if_not_equal(uint64_t address) {
+        basecode::instruction_t branch_op;
+        branch_op.op = basecode::op_codes::bne;
+        branch_op.size = basecode::op_sizes::qword;
+        branch_op.operands_count = 1;
+        branch_op.operands[0].type = basecode::operand_types::constant_integer;
+        branch_op.operands[0].value.u64 = address;
+        _instructions.push_back(branch_op);
+    }
 
-
-
-
-
-
-
-
-
+};
