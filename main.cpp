@@ -11,10 +11,10 @@ static void print_results(basecode::result& r) {
     fmt::print("result success: {}\n", !r.is_failed());
     for (const auto& msg : r.messages()) {
         fmt::print(
-            "\t{} code: {}| message: {}\n",
-            msg.is_error() ? "ERROR" : "",
-            msg.code(),
-            msg.message());
+                "\t|{}|{}{}\n",
+                msg.code(),
+                msg.is_error() ? "ERROR" : "",
+                msg.message());
     }
 }
 
@@ -54,6 +54,13 @@ static bool test_square(basecode::result& r, basecode::terp& terp) {
         return false;
 
     auto result = run_terp(r, terp);
+    if (terp.register_file().i[5] != 81) {
+        r.add_message("T001", "I5 should contain 81.", true);
+    }
+
+    if (terp.register_file().i[6] != 25) {
+        r.add_message("T001", "I6 should contain 25.", true);
+    }
 
     return result;
 }

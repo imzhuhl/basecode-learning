@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include "result.h"
 #include "terp.h"
+#include "result.h"
 
 namespace basecode {
 
@@ -24,38 +24,60 @@ namespace basecode {
 
         uint64_t start_address() const;
 
-        void branch_if_equal(uint64_t address);
+        void add_int_register_to_register(
+                op_sizes size,
+                uint8_t target_index,
+                uint8_t lhs_index,
+                uint8_t rhs_index);
 
-        void branch_if_not_equal(uint64_t address);
+        void load_with_offset_to_register(
+                uint8_t source_index,
+                uint8_t target_index,
+                uint64_t offset);
 
-        void compare_int_register_to_constant(op_sizes size, uint8_t index, uint64_t value);
-
-        void add_int_register_to_register(op_sizes size, uint8_t target_index,
-                                          uint8_t lhs_index, uint8_t rhs_index);
-
-        void load_with_offset_to_register(uint8_t source_index, uint8_t target_index, uint64_t offset);
-
-        void move_int_constant_to_register(op_sizes size, uint64_t value, uint8_t index);
+        void move_int_constant_to_register(
+                op_sizes size,
+                uint64_t value,
+                uint8_t index);
 
         bool encode(result& r, terp& terp);
 
-        void load_stack_offset_to_register(uint8_t target_index, uint64_t offset);
+        void load_stack_offset_to_register(
+                uint8_t target_index,
+                uint64_t offset);
 
-        void store_register_to_stack_offset(uint8_t source_index, uint64_t offset);
+        void store_register_to_stack_offset(
+                uint8_t source_index,
+                uint64_t offset);
 
-        void store_with_offset_from_register(uint8_t source_index, uint8_t target_index, uint64_t offset);
+        void store_with_offset_from_register(
+                uint8_t source_index,
+                uint8_t target_index,
+                uint64_t offset);
 
-        void divide_int_register_to_register(op_sizes size, uint8_t target_index,
-                                             uint8_t lhs_index, uint8_t rhs_index);
+        void divide_int_register_to_register(
+                op_sizes size,
+                uint8_t target_index,
+                uint8_t lhs_index,
+                uint8_t rhs_index);
 
-        void multiply_int_register_to_register(op_sizes size, uint8_t target_index,
-                                               uint8_t lhs_index, uint8_t rhs_index);
+        void multiply_int_register_to_register(
+                op_sizes size,
+                uint8_t target_index,
+                uint8_t lhs_index,
+                uint8_t rhs_index);
 
-        void subtract_int_register_to_register(op_sizes size, uint8_t target_index,
-                                               uint8_t lhs_index, uint8_t rhs_index);
+        void subtract_int_register_to_register(
+                op_sizes size,
+                uint8_t target_index,
+                uint8_t lhs_index,
+                uint8_t rhs_index);
 
-        void subtract_int_constant_from_register(op_sizes size, uint8_t target_index,
-                                                 uint8_t lhs_index, uint64_t rhs_value);
+        void subtract_int_constant_from_register(
+                op_sizes size,
+                uint8_t target_index,
+                uint8_t lhs_index,
+                uint64_t rhs_value);
 
         void jump_direct(uint64_t address);
 
@@ -66,6 +88,20 @@ namespace basecode {
         void dec(op_sizes size, uint8_t index);
 
         void inc(op_sizes size, uint8_t index);
+
+        void compare_int_register_to_constant(
+                op_sizes size,
+                uint8_t index,
+                uint64_t value);
+
+        void compare_int_register_to_register(
+                op_sizes size,
+                uint8_t lhs_index,
+                uint8_t rhs_index);
+
+        void branch_if_equal(uint64_t address);
+
+        void branch_if_not_equal(uint64_t address);
 
         void jump_subroutine_indirect(uint8_t index);
 
@@ -81,11 +117,9 @@ namespace basecode {
 
         void push_int_constant(op_sizes size, uint64_t value);
 
-
     private:
         uint64_t _start_address = 0;
         std::vector<instruction_t> _instructions {};
     };
 
-}
-
+};
